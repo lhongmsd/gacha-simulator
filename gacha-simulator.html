@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gacha Drop Rate Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg-deep:#0a0a1a;--bg-card:#12122a;--bg-panel:#1a1a35;--bg-input:#0f0f25;--accent-gold:#ffd700;--accent-purple:#b44fff;--accent-blue:#4fa3ff;--accent-cyan:#00e5ff;--ssr-color:#ffd700;--ssr-glow:#ff8c00;--sr-color:#cc55ff;--sr-glow:#8822cc;--r-color:#4488ff;--r-glow:#2255cc;--n-color:#aaaacc;--n-glow:#666699;--text-main:#e8e8ff;--text-dim:#8888aa;--border-glow:rgba(180,79,255,0.3);--success:#00e676;--danger:#ff5252;--warning:#ffca28;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--bg-deep);color:var(--text-main);min-height:100vh;overflow-x:hidden;}
+#starfield{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden;}
+.star{position:absolute;background:white;border-radius:50%;animation:twinkle var(--dur,3s) infinite ease-in-out;}
+@keyframes twinkle{0%,100%{opacity:0.2;transform:scale(1);}50%{opacity:1;transform:scale(1.4);}}
+.container{max-width:1100px;margin:0 auto;padding:20px;position:relative;z-index:1;}
+.header{text-align:center;padding:40px 20px 30px;background:radial-gradient(ellipse at top,rgba(180,79,255,0.15) 0%,transparent 70%);border-bottom:1px solid var(--border-glow);position:relative;z-index:1;}
+.header-logo{font-size:3em;margin-bottom:5px;display:block;animation:logoFloat 3s ease-in-out infinite;}
+@keyframes logoFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+.header-title{font-family:'Cinzel Decorative',serif;font-size:clamp(1.4em,4vw,2.2em);background:linear-gradient(135deg,#ffd700,#ff8c00,#ff44cc,#b44fff,#4fa3ff);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gradShift 4s ease infinite;}
+@keyframes gradShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+.header-sub{color:var(--text-dim);margin-top:8px;font-size:0.95em;}
+.nav-tabs{display:flex;gap:4px;margin:20px 0 0;background:var(--bg-card);border-radius:12px;padding:6px;border:1px solid var(--border-glow);flex-wrap:wrap;position:relative;z-index:1;}
+.nav-tab{flex:1;min-width:100px;padding:10px 8px;text-align:center;background:transparent;border:none;color:var(--text-dim);font-family:'Nunito',sans-serif;font-size:0.85em;font-weight:700;cursor:pointer;border-radius:8px;transition:all 0.3s;white-space:nowrap;}
+.nav-tab.active{background:linear-gradient(135deg,rgba(180,79,255,0.3),rgba(79,163,255,0.3));color:var(--text-main);box-shadow:0 0 12px rgba(180,79,255,0.4);}
+.nav-tab:hover:not(.active){background:rgba(255,255,255,0.05);color:var(--text-main);}
+.section{display:none;animation:fadeIn 0.4s ease;}
+.section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.panel{background:var(--bg-panel);border:1px solid var(--border-glow);border-radius:16px;padding:24px;margin-bottom:20px;position:relative;overflow:hidden;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent-purple),var(--accent-blue),transparent);}
+.panel-title{font-size:1.1em;font-weight:800;color:var(--accent-cyan);margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+.form-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.form-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:120px;}
+.form-group label{font-size:0.8em;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+input[type=number],input[type=text],select{background:var(--bg-input);border:1px solid var(--border-glow);color:var(--text-main);padding:10px 14px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.95em;width:100%;transition:border-color 0.3s,box-shadow 0.3s;}
+input:focus,select:focus{outline:none;border-color:var(--accent-purple);box-shadow:0 0 12px rgba(180,79,255,0.3);}
+select option{background:#1a1a35;}
+.rate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}
+.rate-item{background:var(--bg-input);border-radius:12px;padding:16px;border:1px solid transparent;}
+.rate-item.ssr{border-color:rgba(255,215,0,0.3);}.rate-item.sr{border-color:rgba(180,79,255,0.3);}.rate-item.r{border-color:rgba(68,136,255,0.3);}.rate-item.n{border-color:rgba(170,170,204,0.3);}
+.rate-label{font-size:1em;font-weight:800;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+.rate-label .badge{font-size:0.75em;padding:2px 8px;border-radius:20px;font-weight:700;}
+.ssr .rate-label .badge{background:rgba(255,215,0,0.2);color:var(--ssr-color);}.sr .rate-label .badge{background:rgba(180,79,255,0.2);color:var(--sr-color);}.r .rate-label .badge{background:rgba(68,136,255,0.2);color:var(--r-color);}.n .rate-label .badge{background:rgba(170,170,204,0.2);color:var(--n-color);}
+.rate-name.ssr{color:var(--ssr-color);}.rate-name.sr{color:var(--sr-color);}.rate-name.r{color:var(--r-color);}.rate-name.n{color:var(--n-color);}
+.rate-bar-wrap{height:6px;background:rgba(255,255,255,0.05);border-radius:3px;margin-top:8px;overflow:hidden;}
+.rate-bar{height:100%;border-radius:3px;transition:width 0.4s ease;}
+.ssr .rate-bar{background:linear-gradient(90deg,var(--ssr-glow),var(--ssr-color));}.sr .rate-bar{background:linear-gradient(90deg,var(--sr-glow),var(--sr-color));}.r .rate-bar{background:linear-gradient(90deg,var(--r-glow),var(--r-color));}.n .rate-bar{background:linear-gradient(90deg,var(--n-glow),var(--n-color));}
+.rate-total{text-align:center;padding:12px;border-radius:10px;font-weight:800;font-size:1em;margin-top:10px;transition:all 0.3s;}
+.rate-total.ok{background:rgba(0,230,118,0.1);color:var(--success);border:1px solid rgba(0,230,118,0.3);}
+.rate-total.err{background:rgba(255,82,82,0.1);color:var(--danger);border:1px solid rgba(255,82,82,0.3);animation:shake 0.4s;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+.btn{padding:10px 20px;border:none;border-radius:10px;font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;font-size:0.9em;transition:all 0.3s;display:inline-flex;align-items:center;gap:6px;position:relative;overflow:hidden;}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0.1);opacity:0;transition:opacity 0.2s;}
+.btn:hover::after{opacity:1;}.btn:active{transform:scale(0.97);}
+.btn-primary{background:linear-gradient(135deg,#7b2fff,#4fa3ff);color:white;box-shadow:0 4px 15px rgba(123,47,255,0.4);}
+.btn-gold{background:linear-gradient(135deg,#ff8c00,#ffd700);color:#1a1a00;box-shadow:0 4px 15px rgba(255,165,0,0.4);}
+.btn-danger{background:rgba(255,82,82,0.2);color:var(--danger);border:1px solid rgba(255,82,82,0.3);}
+.btn-danger:hover{background:rgba(255,82,82,0.35);}
+.btn-outline{background:transparent;color:var(--accent-cyan);border:1px solid var(--accent-cyan);}
+.btn-outline:hover{background:rgba(0,229,255,0.1);}
+.btn-sm{padding:6px 12px;font-size:0.8em;}
+.btn-gacha{background:linear-gradient(135deg,#ff6b00,#ffd700,#ff6b00);background-size:200% 200%;animation:gachaBtnShift 2s ease infinite;color:#1a0a00;font-size:1.1em;padding:14px 36px;box-shadow:0 0 30px rgba(255,165,0,0.5);font-family:'Cinzel Decorative',serif;}
+@keyframes gachaBtnShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+.btn-gacha:hover{box-shadow:0 0 50px rgba(255,165,0,0.8);transform:translateY(-2px) scale(1.02);}
+.item-table{width:100%;border-collapse:collapse;}
+.item-table th{text-align:left;padding:10px 14px;color:var(--text-dim);font-size:0.8em;text-transform:uppercase;border-bottom:1px solid var(--border-glow);font-weight:700;}
+.item-table td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03);}
+.item-table tr:hover td{background:rgba(255,255,255,0.02);}
+.rarity-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.8em;font-weight:800;}
+.rarity-tag.SSR{background:rgba(255,215,0,0.15);color:var(--ssr-color);border:1px solid rgba(255,215,0,0.3);}
+.rarity-tag.SR{background:rgba(180,79,255,0.15);color:var(--sr-color);border:1px solid rgba(180,79,255,0.3);}
+.rarity-tag.R{background:rgba(68,136,255,0.15);color:var(--r-color);border:1px solid rgba(68,136,255,0.3);}
+.rarity-tag.N{background:rgba(170,170,204,0.15);color:var(--n-color);border:1px solid rgba(170,170,204,0.3);}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;}
+.summary-card{background:var(--bg-input);border-radius:14px;padding:16px;text-align:center;border:1px solid var(--border-glow);transition:transform 0.3s;}
+.summary-card:hover{transform:translateY(-3px);}
+.summary-card .sc-icon{font-size:1.8em;margin-bottom:6px;}.summary-card .sc-value{font-size:1.6em;font-weight:800;}.summary-card .sc-label{font-size:0.75em;color:var(--text-dim);margin-top:2px;}
+.summary-card.ssr .sc-value{color:var(--ssr-color);}.summary-card.sr .sc-value{color:var(--sr-color);}.summary-card.r .sc-value{color:var(--r-color);}.summary-card.n .sc-value{color:var(--n-color);}
+.comp-table{width:100%;border-collapse:collapse;font-size:0.9em;}
+.comp-table th{padding:10px 14px;color:var(--text-dim);font-size:0.8em;text-transform:uppercase;border-bottom:1px solid var(--border-glow);text-align:right;}
+.comp-table th:first-child{text-align:left;}.comp-table td{padding:10px 14px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.03);}.comp-table td:first-child{text-align:left;font-weight:700;}
+.comp-table .diff-pos{color:var(--success);}.comp-table .diff-neg{color:var(--danger);}
+.item-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;}
+.item-card{border-radius:14px;padding:14px 10px;text-align:center;position:relative;overflow:hidden;cursor:default;animation:cardAppear 0.5s ease backwards;border:2px solid transparent;transition:transform 0.3s;}
+.item-card:hover{transform:translateY(-4px) scale(1.03);}
+@keyframes cardAppear{from{opacity:0;transform:scale(0.7) rotateY(90deg);}to{opacity:1;transform:scale(1) rotateY(0deg);}}
+.item-card.SSR{background:linear-gradient(145deg,#2a1800,#1a1000);border-color:var(--ssr-color);box-shadow:0 0 15px rgba(255,165,0,0.3);}
+.item-card.SR{background:linear-gradient(145deg,#1a0028,#0f0015);border-color:var(--sr-color);box-shadow:0 0 12px rgba(180,79,255,0.3);}
+.item-card.R{background:linear-gradient(145deg,#001428,#000f1a);border-color:var(--r-color);box-shadow:0 0 10px rgba(68,136,255,0.25);}
+.item-card.N{background:linear-gradient(145deg,#111120,#0a0a18);border-color:var(--n-color);}
+.item-card-art{width:64px;height:64px;margin:0 auto 8px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6em;}
+.item-card.SSR .item-card-art{background:radial-gradient(circle,rgba(255,215,0,0.3),transparent);box-shadow:0 0 20px rgba(255,165,0,0.5);animation:ssrPulse 2s ease-in-out infinite;}
+@keyframes ssrPulse{0%,100%{box-shadow:0 0 20px rgba(255,165,0,0.5);}50%{box-shadow:0 0 35px rgba(255,165,0,0.8);}}
+.item-card.SR .item-card-art{background:radial-gradient(circle,rgba(180,79,255,0.3),transparent);box-shadow:0 0 15px rgba(180,79,255,0.4);}
+.item-card.R .item-card-art{background:radial-gradient(circle,rgba(68,136,255,0.3),transparent);box-shadow:0 0 12px rgba(68,136,255,0.3);}
+.item-card.N .item-card-art{background:radial-gradient(circle,rgba(170,170,204,0.15),transparent);}
+.item-card-stars{font-size:0.7em;margin-bottom:4px;letter-spacing:1px;}
+.item-card.SSR .item-card-stars{color:var(--ssr-color);}.item-card.SR .item-card-stars{color:var(--sr-color);}.item-card.R .item-card-stars{color:var(--r-color);}.item-card.N .item-card-stars{color:var(--n-color);}
+.item-card-name{font-size:0.72em;font-weight:700;line-height:1.3;word-break:break-word;}
+.item-card-count{position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border-radius:50%;width:22px;height:22px;font-size:0.7em;font-weight:800;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.2);}
+#gachaOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;}
+#gachaOverlay.visible{display:flex;}
+.gacha-anim-container{position:relative;width:340px;height:420px;}
+.gacha-portal{width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,215,0,0.1) 0%,rgba(180,79,255,0.2) 40%,transparent 70%);border:3px solid rgba(180,79,255,0.5);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);animation:portalSpin 1s linear infinite,portalPulse 0.8s ease-in-out infinite;}
+@keyframes portalSpin{0%{border-color:rgba(255,215,0,0.8) rgba(180,79,255,0.3) rgba(79,163,255,0.3) rgba(255,215,0,0.3);}100%{border-color:rgba(255,215,0,0.3) rgba(255,215,0,0.8) rgba(180,79,255,0.3) rgba(79,163,255,0.3);}}
+@keyframes portalPulse{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.05);}}
+.gacha-portal-inner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:5em;animation:iconSpin 0.6s ease-in-out infinite alternate;}
+@keyframes iconSpin{from{transform:translate(-50%,-50%) scale(1) rotate(-10deg);}to{transform:translate(-50%,-50%) scale(1.15) rotate(10deg);}}
+.gacha-sparks{position:absolute;top:50%;left:50%;pointer-events:none;}
+.spark{position:absolute;width:4px;height:4px;border-radius:50%;animation:sparkFly var(--sd,0.8s) ease-out infinite;background:var(--sc,#ffd700);}
+@keyframes sparkFly{0%{transform:translate(0,0) scale(1);opacity:1;}100%{transform:translate(var(--sx,40px),var(--sy,-60px)) scale(0);opacity:0;}}
+.gacha-text{color:var(--accent-gold);font-family:'Cinzel Decorative',serif;font-size:1.2em;text-align:center;margin-top:20px;animation:textPulse 0.5s ease-in-out infinite alternate;}
+@keyframes textPulse{from{opacity:0.6;text-shadow:0 0 10px rgba(255,215,0,0.5);}to{opacity:1;text-shadow:0 0 30px rgba(255,215,0,0.9);}}
+.chart-bar-wrap{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.chart-bar-label{width:30px;font-size:0.8em;font-weight:700;}
+.chart-bar-track{flex:1;height:24px;background:rgba(255,255,255,0.05);border-radius:6px;overflow:hidden;}
+.chart-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:0.78em;font-weight:800;transition:width 1s ease;}
+.chart-bar-fill.SSR{background:linear-gradient(90deg,rgba(255,165,0,0.3),var(--ssr-color));color:#1a1000;}
+.chart-bar-fill.SR{background:linear-gradient(90deg,rgba(140,20,200,0.3),var(--sr-color));color:white;}
+.chart-bar-fill.R{background:linear-gradient(90deg,rgba(30,80,200,0.3),var(--r-color));color:white;}
+.chart-bar-fill.N{background:linear-gradient(90deg,rgba(80,80,120,0.3),var(--n-color));color:#0a0a18;}
+.pity-display{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;}
+.pity-item{background:var(--bg-input);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border-glow);}
+.pity-item .pv{font-size:1.4em;font-weight:800;}.pity-item .pl{font-size:0.72em;color:var(--text-dim);margin-top:3px;}
+.history-list{display:flex;flex-direction:column;gap:10px;max-height:500px;overflow-y:auto;}
+.history-item{background:var(--bg-input);border-radius:12px;padding:14px;border-left:3px solid var(--accent-purple);transition:all 0.3s;}
+.history-item:hover{transform:translateX(4px);border-left-color:var(--ssr-color);}
+.history-meta{font-size:0.8em;color:var(--text-dim);margin-bottom:6px;}
+.history-counts{display:flex;gap:14px;flex-wrap:wrap;}
+.history-count{font-size:0.85em;font-weight:700;}
+.pov-insight{background:linear-gradient(135deg,rgba(0,229,255,0.05),rgba(180,79,255,0.05));border:1px solid rgba(0,229,255,0.3);border-radius:14px;padding:18px;font-size:0.95em;line-height:1.7;}
+.pov-insight strong{color:var(--accent-cyan);}
+.toggle-wrap{display:flex;align-items:center;gap:12px;}
+.toggle{position:relative;width:44px;height:24px;background:rgba(255,255,255,0.1);border-radius:12px;cursor:pointer;transition:background 0.3s;}
+.toggle.on{background:var(--accent-purple);}
+.toggle-dot{position:absolute;top:3px;left:3px;width:18px;height:18px;background:white;border-radius:50%;transition:transform 0.3s;}
+.toggle.on .toggle-dot{transform:translateX(20px);}
+.alert{padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:0.9em;font-weight:600;display:none;}
+.alert.show{display:block;animation:fadeIn 0.3s;}
+.alert-err{background:rgba(255,82,82,0.1);border:1px solid rgba(255,82,82,0.3);color:var(--danger);}
+.alert-info{background:rgba(79,163,255,0.1);border:1px solid rgba(79,163,255,0.3);color:var(--accent-blue);}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;display:flex;align-items:center;justify-content:center;}
+.modal-overlay.hidden{display:none;}
+.modal-box{background:var(--bg-panel);border:1px solid var(--border-glow);border-radius:20px;padding:28px;width:90%;max-width:440px;box-shadow:0 0 40px rgba(180,79,255,0.35);animation:modalIn 0.25s ease;}
+@keyframes modalIn{from{opacity:0;transform:scale(0.88) translateY(-16px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-title{font-size:1.1em;font-weight:800;color:var(--accent-cyan);margin-bottom:20px;}
+.modal-msg{color:var(--text-dim);line-height:1.7;margin-bottom:4px;}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end;}
+.preset-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.btn-preset{background:rgba(0,229,255,0.08);color:var(--accent-cyan);border:1px solid rgba(0,229,255,0.35);border-radius:8px;padding:6px 14px;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82em;cursor:pointer;transition:all 0.2s;}
+.btn-preset:hover{background:rgba(0,229,255,0.2);transform:translateY(-1px);}
+.btn-preset.active{background:rgba(0,229,255,0.25);border-color:var(--accent-cyan);}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg-deep);}::-webkit-scrollbar-thumb{background:var(--accent-purple);border-radius:3px;}
+@media(max-width:600px){.header-title{font-size:1.3em;}.container{padding:12px;}.panel{padding:16px;}.item-cards-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));}.summary-grid{grid-template-columns:repeat(2,1fr);}.nav-tab{font-size:0.75em;padding:8px 6px;}}
+.flex-wrap{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.mt{margin-top:14px;}.mb{margin-bottom:14px;}
+.text-gold{color:var(--accent-gold);}.text-dim{color:var(--text-dim);}.text-sm{font-size:0.85em;}.text-center{text-align:center;}
+.empty-state{text-align:center;color:var(--text-dim);padding:30px;font-size:0.9em;}
+.empty-state .es-icon{font-size:2.5em;margin-bottom:8px;}
+hr.divider{border:none;border-top:1px solid var(--border-glow);margin:20px 0;}
+</style>
+</head>
+<body>
+<div id="starfield"></div>
+
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal-box">
+    <div class="modal-title">&#9999;&#65039; แก้ไข Item</div>
+    <div class="form-group mb">
+      <label>ชื่อ Item</label>
+      <input type="text" id="editItemName" placeholder="ชื่อ Item" />
+    </div>
+    <div class="form-group">
+      <label>Rarity</label>
+      <select id="editItemRarity">
+        <option value="SSR">&#11088;&#11088;&#11088; SSR</option>
+        <option value="SR">&#11088;&#11088; SR</option>
+        <option value="R">&#11088; R</option>
+        <option value="N">N</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm" onclick="closeEditModal()">&#x2716; ยกเลิก</button>
+      <button class="btn btn-gold btn-sm" onclick="confirmEditItem()">&#x2705; บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal-box">
+    <div class="modal-title">&#128465;&#65039; ยืนยันการลบ</div>
+    <p class="modal-msg" id="deleteModalMsg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" onclick="closeDeleteModal()">&#x2716; ยกเลิก</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDeleteItem()">&#128465;&#65039; ลบเลย</button>
+    </div>
+  </div>
+</div>
+
+<div id="gachaOverlay">
+  <div class="gacha-anim-container">
+    <div class="gacha-portal"></div>
+    <div class="gacha-portal-inner" id="gachaIcon">&#10024;</div>
+    <div class="gacha-sparks" id="gachaSparks"></div>
+  </div>
+  <div class="gacha-text" id="gachaText">&#21628;&#21916;&#20013;...</div>
+  <div style="margin-top:16px;color:var(--text-dim);font-size:0.85em;" id="gachaSubText"></div>
+</div>
+
+<div class="header">
+  <span class="header-logo">&#9876;&#65039;</span>
+  <div class="header-title">&#10024; Gacha Drop Rate Simulator &#10024;</div>
+  <div class="header-sub">&#127924; &#3592;&#3635;&#3621;&#3629;&#3591;&#3619;&#3632;&#3610;&#3610;&#3626;&#3640;&#3656;&#3617;&#3585;&#3634;&#3594;&#3634; &middot; &#3604;&#3641;&#3629;&#3633;&#3605;&#3619;&#3634;&#3604;&#3619;&#3629;&#3611; &middot; &#3623;&#3636;&#3648;&#3588;&#3619;&#3634;&#3632;&#3627;&#3660;&#3591;&#3610;&#3612;&#3641;&#3657;&#3648;&#3621;&#3656;&#3609; &#127924;</div>
+</div>
+
+<div class="container">
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('tab-setup')">&#9881;&#65039; &#3605;&#3633;&#3657;&#3591;&#3588;&#3656;&#3634;</button>
+    <button class="nav-tab" onclick="showTab('tab-items')">&#128230; Item Pool</button>
+    <button class="nav-tab" onclick="showTab('tab-sim')">&#127922; &#3592;&#3635;&#3621;&#3629;&#3591;&#3626;&#3640;&#3656;&#3617;</button>
+    <button class="nav-tab" onclick="showTab('tab-pov')">&#128100; Player POV</button>
+    <button class="nav-tab" onclick="showTab('tab-history')">&#128220; &#3611;&#3619;&#3632;&#3623;&#3633;&#3605;&#3636;</button>
+  </div>
+
+  <div id="tab-setup" class="section active">
+    <div class="panel">
+      <div class="panel-title">&#127919; &#3605;&#3633;&#3657;&#3591;&#3588;&#3656;&#3634;&#3629;&#3633;&#3605;&#3619;&#3634;&#3604;&#3619;&#3629;&#3611; (Rate Settings)</div>
+      <div class="rate-grid">
+        <div class="rate-item ssr">
+          <div class="rate-label"><span class="rate-name ssr">&#11088;&#11088;&#11088; SSR</span><span class="badge">Ultra Rare</span></div>
+          <input type="number" id="rateSSR" value="1" min="0" max="100" step="0.1" oninput="updateRates()" />
+          <div class="rate-bar-wrap"><div class="rate-bar" id="barSSR" style="width:1%"></div></div>
+        </div>
+        <div class="rate-item sr">
+          <div class="rate-label"><span class="rate-name sr">&#11088;&#11088; SR</span><span class="badge">Super Rare</span></div>
+          <input type="number" id="rateSR" value="9" min="0" max="100" step="0.1" oninput="updateRates()" />
+          <div class="rate-bar-wrap"><div class="rate-bar" id="barSR" style="width:9%"></div></div>
+        </div>
+        <div class="rate-item r">
+          <div class="rate-label"><span class="rate-name r">&#11088; R</span><span class="badge">Rare</span></div>
+          <input type="number" id="rateR" value="30" min="0" max="100" step="0.1" oninput="updateRates()" />
+          <div class="rate-bar-wrap"><div class="rate-bar" id="barR" style="width:30%"></div></div>
+        </div>
+        <div class="rate-item n">
+          <div class="rate-label"><span class="rate-name n">N</span><span class="badge">Normal</span></div>
+          <input type="number" id="rateN" value="60" min="0" max="100" step="0.1" oninput="updateRates()" />
+          <div class="rate-bar-wrap"><div class="rate-bar" id="barN" style="width:60%"></div></div>
+        </div>
+      </div>
+      <div id="rateTotalMsg" class="rate-total ok mt">&#x2705; Rate &#3619;&#3623;&#3617;: 100% &#8212; &#3614;&#3619;&#3657;&#3629;&#3626;&#3640;&#3656;&#3617;!</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">&#128737;&#65039; &#3619;&#3632;&#3610;&#3610; Pity (Bonus)</div>
+      <div class="toggle-wrap mb">
+        <div class="toggle" id="pityToggle" onclick="togglePity()"><div class="toggle-dot"></div></div>
+        <span id="pityToggleLabel" style="font-weight:700;color:var(--text-dim)">&#3611;&#3636;&#3604; Pity System</span>
+      </div>
+      <div id="pitySettings" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label>SSR Pity</label>
+            <input type="number" id="pitySSR" value="90" min="1" max="999" oninput="document.getElementById('pitySSRShow').textContent=this.value" />
+          </div>
+          <div class="form-group">
+            <label>SR Pity</label>
+            <input type="number" id="pitySR" value="10" min="1" max="999" oninput="document.getElementById('pitySRShow').textContent=this.value" />
+          </div>
+        </div>
+        <div class="pity-display">
+          <div class="pity-item"><div class="pv text-gold" id="pitySSRCount">0</div><div class="pl">Pulls &#3605;&#3633;&#3657;&#3591;&#3649;&#3605;&#3656; SSR &#3621;&#3656;&#3634;&#3626;&#3640;&#3604;</div></div>
+        </div>
+        <div class="alert alert-info show mt" style="display:block">
+          SSR Pity: &#3588;&#3619;&#3610; <strong id="pitySSRShow">90</strong> &#3588;&#3619;&#3633;&#3657;&#3591; | SR Pity: &#3588;&#3619;&#3610; <strong id="pitySRShow">10</strong> &#3588;&#3619;&#3633;&#3657;&#3591;
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-items" class="section">
+    <div class="panel">
+      <div class="panel-title">&#10133; &#3648;&#3614;&#3636;&#3656;&#3617; Item &#3651;&#3609; Pool</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label>&#3594;&#3639;&#3656;&#3629; Item</label>
+          <input type="text" id="itemName" placeholder="&#3648;&#3594;&#3656;&#3609; Excalibur, Rimuru ..." />
+        </div>
+        <div class="form-group">
+          <label>Rarity</label>
+          <select id="itemRarity">
+            <option value="SSR">&#11088;&#11088;&#11088; SSR</option>
+            <option value="SR">&#11088;&#11088; SR</option>
+            <option value="R" selected>&#11088; R</option>
+            <option value="N">N</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:0;justify-content:flex-end;padding-top:20px">
+          <button class="btn btn-gold" onclick="addItem()">&#10133; Add Item</button>
+        </div>
+      </div>
+      <div id="itemAlert" class="alert alert-err"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" style="justify-content:space-between">
+        <span>&#128203; &#3619;&#3634;&#3618;&#3585;&#3634;&#3619; Item Pool</span>
+        <button class="btn btn-outline btn-sm" onclick="resetItemPool()">&#8634; Reset Default</button>
+      </div>
+      <div id="poolValidationAlert" class="alert alert-err"></div>
+      <div id="itemPoolContainer">
+        <div class="empty-state"><div class="es-icon">&#128237;</div><div>&#3618;&#3633;&#3591;&#3652;&#3617;&#3656;&#3617;&#3637; Item</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-sim" class="section">
+    <div class="panel">
+      <div class="panel-title" style="justify-content:space-between">
+        <span>&#127922; &#3605;&#3633;&#3657;&#3591;&#3588;&#3656;&#3634;&#3585;&#3634;&#3619;&#3626;&#3640;&#3656;&#3617;</span>
+        <button class="btn btn-outline btn-sm" onclick="resetSimSettings()">&#8634; Reset</button>
+      </div>
+      <div class="form-group mb">
+        <label>Quick Presets</label>
+        <div class="preset-btns">
+          <button class="btn-preset" id="preset-100" onclick="setPreset(100)">100 &#3588;&#3619;&#3633;&#3657;&#3591;</button>
+          <button class="btn-preset" id="preset-1000" onclick="setPreset(1000)">1,000 &#3588;&#3619;&#3633;&#3657;&#3591;</button>
+          <button class="btn-preset" id="preset-10000" onclick="setPreset(10000)">10,000 &#3588;&#3619;&#3633;&#3657;&#3591;</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>&#3592;&#3635;&#3609;&#3623;&#3609;&#3588;&#3619;&#3633;&#3657;&#3591;&#3607;&#3637;&#3656;&#3626;&#3640;&#3656;&#3617;</label>
+          <input type="number" id="simRolls" value="10" min="1" max="10000" oninput="onSimRollsChange(this)" />
+        </div>
+        <div class="form-group">
+          <label>&#3619;&#3634;&#3588;&#3634;&#3605;&#3656;&#3629;&#3588;&#3619;&#3633;&#3657;&#3591; (&#3610;&#3634;&#3607;)</label>
+          <input type="number" id="simPPR" value="30" min="0" step="1" oninput="onSimPPRChange(this)" />
+        </div>
+        <div class="form-group">
+          <label>&#3619;&#3634;&#3588;&#3634;&#3619;&#3623;&#3617; (&#3610;&#3634;&#3607;)</label>
+          <input type="number" id="simPrice" value="300" min="0" oninput="onSimPriceChange(this)" />
+        </div>
+      </div>
+      <div style="font-size:0.78em;color:var(--text-dim);margin-top:-8px;margin-bottom:10px">
+        &#128161; &#3649;&#3585;&#3657;&#3652;&#3586;&#3594;&#3656;&#3629;&#3591;&#3651;&#3604;&#3594;&#3656;&#3629;&#3591;&#3627;&#3609;&#3638;&#3656;&#3591; &#3629;&#3637;&#3585; 2 &#3594;&#3656;&#3629;&#3591;&#3592;&#3632;&#3629;&#3633;&#3611;&#3648;&#3604;&#3607;&#3629;&#3633;&#3605;&#3650;&#3609;&#3617;&#3633;&#3605;&#3636;
+      </div>
+      <div id="simAlert" class="alert alert-err"></div>
+      <div class="flex-wrap mt">
+        <button class="btn btn-gacha" onclick="runSimulation()">&#127924; &#3648;&#3619;&#3636;&#3656;&#3617;&#3626;&#3640;&#3656;&#3617;!</button>
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">&#128229; Export CSV</button>
+      </div>
+    </div>
+    <div id="simResults" style="display:none">
+      <div class="panel">
+        <div class="panel-title">&#128202; &#3612;&#3621;&#3621;&#3633;&#3614;&#3608;&#3660;&#3585;&#3634;&#3619;&#3626;&#3640;&#3656;&#3617;</div>
+        <div class="summary-grid" id="summaryCards"></div>
+        <hr class="divider">
+        <div class="panel-title">&#128200; &#3648;&#3611;&#3619;&#3637;&#3618;&#3610;&#3648;&#3607;&#3637;&#3618;&#3610; Rate &#3605;&#3633;&#3657;&#3591;&#3588;&#3656;&#3634; vs &#3612;&#3621;&#3592;&#3619;&#3636;&#3591;</div>
+        <div style="margin-bottom:14px" id="rateChart"></div>
+        <table class="comp-table">
+          <thead><tr><th>Rarity</th><th>Rate &#3605;&#3633;&#3657;&#3591;&#3588;&#3656;&#3634;</th><th>&#3592;&#3635;&#3609;&#3623;&#3609;&#3607;&#3637;&#3656;&#3652;&#3604;&#3657;</th><th>% &#3592;&#3619;&#3636;&#3591;</th><th>&#3626;&#3656;&#3623;&#3609;&#3605;&#3656;&#3634;&#3591;</th></tr></thead>
+          <tbody id="compTableBody"></tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <div class="panel-title">&#127924; Items &#3607;&#3637;&#3656;&#3626;&#3640;&#3656;&#3617;&#3652;&#3604;&#3657;</div>
+        <div id="itemResultGrid" class="item-cards-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-pov" class="section">
+    <div class="panel">
+      <div class="panel-title">&#128100; Player POV Simulator (Monte Carlo)</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>&#3591;&#3610;&#3648;&#3605;&#3636;&#3617;&#3648;&#3591;&#3636;&#3609; (&#3610;&#3634;&#3607;)</label>
+          <input type="number" id="povBudget" value="3000" min="1" />
+        </div>
+        <div class="form-group">
+          <label>&#3619;&#3634;&#3588;&#3634;&#3605;&#3656;&#3629; Roll (&#3610;&#3634;&#3607;)</label>
+          <input type="number" id="povPrice" value="30" min="1" />
+        </div>
+        <div class="form-group">
+          <label>&#3592;&#3635;&#3609;&#3623;&#3609; Simulation</label>
+          <input type="number" id="povSims" value="1000" min="10" max="50000" />
+        </div>
+      </div>
+      <div class="panel" style="background:var(--bg-input);margin-bottom:0">
+        <div class="toggle-wrap mb">
+          <div class="toggle" id="freeRollToggle" onclick="toggleFreeRoll()"><div class="toggle-dot"></div></div>
+          <span style="font-weight:700">&#9889; Free Roll Rule</span>
+        </div>
+        <div id="freeRollSettings" style="display:none">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Paid Rolls &#3607;&#3637;&#3656;&#3605;&#3657;&#3629;&#3591;&#3588;&#3619;&#3610; (X)</label>
+              <input type="number" id="freeRollX" value="10" min="1" />
+            </div>
+            <div class="form-group">
+              <label>Free Rolls &#3607;&#3637;&#3656;&#3652;&#3604;&#3657; (Y)</label>
+              <input type="number" id="freeRollY" value="1" min="1" />
+            </div>
+          </div>
+          <div class="alert alert-info show" style="display:block">Free rolls &#3652;&#3617;&#3656; cascade</div>
+        </div>
+      </div>
+    </div>
+    <div id="povAlert" class="alert alert-err"></div>
+    <div class="text-center mb">
+      <button class="btn btn-primary" onclick="runMonteCarlo()" style="font-size:1em;padding:12px 32px">&#129518; &#3592;&#3635;&#3621;&#3629;&#3591; Monte Carlo</button>
+      <button class="btn btn-outline btn-sm" onclick="exportPOVCSV()" style="margin-left:8px">&#128229; Export POV CSV</button>
+    </div>
+    <div id="povResults" style="display:none">
+      <div class="panel">
+        <div class="panel-title">&#128202; &#3612;&#3621;&#3585;&#3634;&#3619;&#3592;&#3635;&#3621;&#3629;&#3591;</div>
+        <div class="summary-grid" id="povSummaryCards"></div>
+        <hr class="divider">
+        <div id="povInsight" class="pov-insight"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">&#127942; Best / Worst</div>
+        <div id="povBestWorst"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-history" class="section">
+    <div class="panel">
+      <div class="panel-title">&#128220; &#3611;&#3619;&#3632;&#3623;&#3633;&#3605;&#3636;&#3585;&#3634;&#3619;&#3626;&#3640;&#3656;&#3617; (10 &#3619;&#3629;&#3610;&#3621;&#3656;&#3634;&#3626;&#3640;&#3604;)</div>
+      <div class="flex-wrap mb">
+        <button class="btn btn-danger btn-sm" onclick="clearHistory()">&#128465;&#65039; &#3621;&#3657;&#3634;&#3591;&#3611;&#3619;&#3632;&#3623;&#3633;&#3605;&#3636;</button>
+      </div>
+      <div id="historyList">
+        <div class="empty-state"><div class="es-icon">&#128237;</div><div>&#3618;&#3633;&#3591;&#3652;&#3617;&#3656;&#3617;&#3637;&#3611;&#3619;&#3632;&#3623;&#3633;&#3605;&#3636;</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var itemPool=[
+  {id:1,name:'เซนต์ไนท์',rarity:'SSR'},
+  {id:2,name:'ดาบพิฆาต',rarity:'SSR'},
+  {id:3,name:'นางเอกเวทย์',rarity:'SR'},
+  {id:4,name:'โจรสาวจิ้งจอก',rarity:'SR'},
+  {id:5,name:'นักดาบหน้าน้อย',rarity:'SR'},
+  {id:6,name:'โล่เหล็กกล้า',rarity:'R'},
+  {id:7,name:'ยาพิษ',rarity:'R'},
+  {id:8,name:'หัวลูกศร',rarity:'R'},
+  {id:9,name:'เหรียญทอง',rarity:'N'},
+  {id:10,name:'ผ้าขี้ริ้ว',rarity:'N'}
+];
+var itemIdCounter=11,lastSimResult=null,lastPOVResult=null;
+var pityEnabled=false,freeRollEnabled=false,pitySSRCount=0,pitySRCount=0;
+var simulationHistory=[],editingItemId=null,deletingItemId=null;
+var RE={SSR:'⭐⭐⭐',SR:'⭐⭐',R:'⭐',N:'N'};
+var RS={SSR:'★★★★★',SR:'★★★★',R:'★★★',N:'★'};
+var RC={SSR:'var(--ssr-color)',SR:'var(--sr-color)',R:'var(--r-color)',N:'var(--n-color)'};
+
+(function(){var sf=document.getElementById('starfield');for(var i=0;i<120;i++){var s=document.createElement('div');s.className='star';var sz=Math.random()*2.5+0.5;s.style.cssText='left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;width:'+sz+'px;height:'+sz+'px;--dur:'+(Math.random()*3+1.5).toFixed(1)+'s;animation-delay:'+(Math.random()*3).toFixed(1)+'s;';sf.appendChild(s);}})();
+
+function showTab(id){document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});document.getElementById(id).classList.add('active');var idx=['tab-setup','tab-items','tab-sim','tab-pov','tab-history'].indexOf(id);document.querySelectorAll('.nav-tab')[idx].classList.add('active');}
+
+function getRates(){return{SSR:parseFloat(document.getElementById('rateSSR').value)||0,SR:parseFloat(document.getElementById('rateSR').value)||0,R:parseFloat(document.getElementById('rateR').value)||0,N:parseFloat(document.getElementById('rateN').value)||0};}
+function updateRates(){var r=getRates(),total=+(r.SSR+r.SR+r.R+r.N).toFixed(4),msg=document.getElementById('rateTotalMsg');['SSR','SR','R','N'].forEach(function(k){document.getElementById('bar'+k).style.width=Math.min(r[k],100)+'%';});if(Math.abs(total-100)<0.001){msg.className='rate-total ok mt';msg.textContent='✅ Rate รวม: 100% — พร้อมสุ่ม!';}else{msg.className='rate-total err mt';msg.textContent='❌ Rate รวม: '+total+'% — ต้องรวมเป็น 100%!';}}
+function validateRates(){var r=getRates(),total=+(r.SSR+r.SR+r.R+r.N).toFixed(4);if(Math.abs(total-100)>=0.001)return 'Rate รวม = '+total+'%';if(r.SSR<0||r.SR<0||r.R<0||r.N<0)return 'Rate ติดลบ';return null;}
+
+function togglePity(){pityEnabled=!pityEnabled;var t=document.getElementById('pityToggle'),l=document.getElementById('pityToggleLabel');t.classList.toggle('on',pityEnabled);l.textContent=pityEnabled?'เปิด Pity System ✅':'ปิด Pity System';l.style.color=pityEnabled?'var(--success)':'var(--text-dim)';document.getElementById('pitySettings').style.display=pityEnabled?'block':'none';}
+function toggleFreeRoll(){freeRollEnabled=!freeRollEnabled;document.getElementById('freeRollToggle').classList.toggle('on',freeRollEnabled);document.getElementById('freeRollSettings').style.display=freeRollEnabled?'block':'none';}
+
+function addItem(){var name=document.getElementById('itemName').value.trim(),rarity=document.getElementById('itemRarity').value,al=document.getElementById('itemAlert');if(!name){showAlert(al,'⚠️ กรุณากรอกชื่อ Item');return;}if(name.length>40){showAlert(al,'⚠️ ชื่อยาวเกิน 40 ตัว');return;}al.classList.remove('show');itemPool.push({id:itemIdCounter++,name:name,rarity:rarity});document.getElementById('itemName').value='';renderItemPool();}
+function editItem(id){var item=itemPool.find(function(i){return i.id===id;});if(!item)return;editingItemId=id;document.getElementById('editItemName').value=item.name;document.getElementById('editItemRarity').value=item.rarity;document.getElementById('editModal').classList.remove('hidden');setTimeout(function(){document.getElementById('editItemName').focus();},80);}
+function closeEditModal(){document.getElementById('editModal').classList.add('hidden');editingItemId=null;}
+function confirmEditItem(){var name=document.getElementById('editItemName').value.trim();if(!name){document.getElementById('editItemName').style.borderColor='var(--danger)';return;}var rarity=document.getElementById('editItemRarity').value,item=itemPool.find(function(i){return i.id===editingItemId;});if(item){item.name=name;item.rarity=rarity;}closeEditModal();renderItemPool();}
+function deleteItem(id){var item=itemPool.find(function(i){return i.id===id;});if(!item)return;deletingItemId=id;document.getElementById('deleteModalMsg').innerHTML='ลบ <strong style="color:'+RC[item.rarity]+'">'+escHtml(item.name)+'</strong> <span class="rarity-tag '+item.rarity+'" style="font-size:0.75em">'+item.rarity+'</span> ออกจาก pool?';document.getElementById('deleteModal').classList.remove('hidden');}
+function closeDeleteModal(){document.getElementById('deleteModal').classList.add('hidden');deletingItemId=null;}
+function confirmDeleteItem(){itemPool=itemPool.filter(function(i){return i.id!==deletingItemId;});closeDeleteModal();renderItemPool();}
+function resetItemPool(){if(!confirm('รีเซ็ต Item Pool?'))return;itemPool=[{id:1,name:'เซนต์ไนท์',rarity:'SSR'},{id:2,name:'ดาบพิฆาต',rarity:'SSR'},{id:3,name:'นางเอกเวทย์',rarity:'SR'},{id:4,name:'โจรสาวจิ้งจอก',rarity:'SR'},{id:5,name:'นักดาบหน้าน้อย',rarity:'SR'},{id:6,name:'โล่เหล็กกล้า',rarity:'R'},{id:7,name:'ยาพิษ',rarity:'R'},{id:8,name:'หัวลูกศร',rarity:'R'},{id:9,name:'เหรียญทอง',rarity:'N'},{id:10,name:'ผ้าขี้ริ้ว',rarity:'N'}];itemIdCounter=11;renderItemPool();}
+
+function renderItemPool(){var c=document.getElementById('itemPoolContainer');if(!itemPool.length){c.innerHTML='<div class="empty-state"><div class="es-icon">&#128237;</div><div>ยังไม่มี Item</div></div>';return;}var g={SSR:[],SR:[],R:[],N:[]};itemPool.forEach(function(i){g[i.rarity].push(i);});var html='<table class="item-table"><thead><tr><th>#</th><th>ชื่อ</th><th>Rarity</th><th>Actions</th></tr></thead><tbody>',idx=1;['SSR','SR','R','N'].forEach(function(r){g[r].forEach(function(item){html+='<tr><td style="color:var(--text-dim)">'+idx+++'</td><td style="font-weight:700">'+escHtml(item.name)+'</td><td><span class="rarity-tag '+item.rarity+'">'+RE[item.rarity]+' '+item.rarity+'</span></td><td><button class="btn btn-outline btn-sm" onclick="editItem('+item.id+')">✏️ Edit</button> <button class="btn btn-danger btn-sm" onclick="deleteItem('+item.id+')">&#128465;&#65039;</button></td></tr>';});});c.innerHTML=html+'</tbody></table>';validateItemPool();}
+function validateItemPool(){var r=getRates(),g={SSR:[],SR:[],R:[],N:[]};itemPool.forEach(function(i){g[i.rarity].push(i);});var miss=[];['SSR','SR','R','N'].forEach(function(k){if(r[k]>0&&!g[k].length)miss.push(k);});var al=document.getElementById('poolValidationAlert');if(miss.length){showAlert(al,'⚠️ ไม่มี Item สำหรับ: '+miss.join(', '));return false;}al.classList.remove('show');return true;}
+function checkPool(){var r=getRates(),g={SSR:[],SR:[],R:[],N:[]};itemPool.forEach(function(i){g[i.rarity].push(i);});var miss=[];['SSR','SR','R','N'].forEach(function(k){if(r[k]>0&&!g[k].length)miss.push(k);});return miss;}
+
+function getPPR(){return parseFloat(document.getElementById('simPPR').value)||30;}
+function setPreset(n){var ppr=getPPR();document.getElementById('simRolls').value=n;document.getElementById('simPrice').value=(n*ppr).toFixed(0);document.getElementById('povBudget').value=(n*ppr).toFixed(0);document.getElementById('povPrice').value=ppr;document.querySelectorAll('.btn-preset').forEach(function(b){b.classList.remove('active');});var btn=document.getElementById('preset-'+n);if(btn)btn.classList.add('active');}
+function onSimRollsChange(inp){var n=parseInt(inp.value)||0,ppr=getPPR();if(n>0)document.getElementById('simPrice').value=(n*ppr).toFixed(0);syncPreset();}
+function onSimPPRChange(inp){var ppr=parseFloat(inp.value)||0,n=parseInt(document.getElementById('simRolls').value)||0;if(ppr>0&&n>0)document.getElementById('simPrice').value=(n*ppr).toFixed(0);}
+function onSimPriceChange(inp){var t=parseFloat(inp.value)||0,ppr=getPPR();if(t>=0&&ppr>0)document.getElementById('simRolls').value=Math.max(1,Math.round(t/ppr));syncPreset();}
+function syncPreset(){var n=parseInt(document.getElementById('simRolls').value)||0;document.querySelectorAll('.btn-preset').forEach(function(b){b.classList.remove('active');});var btn=document.getElementById('preset-'+n);if(btn)btn.classList.add('active');}
+function resetSimSettings(){document.getElementById('simRolls').value=10;document.getElementById('simPPR').value=30;document.getElementById('simPrice').value=300;document.querySelectorAll('.btn-preset').forEach(function(b){b.classList.remove('active');});}
+
+function pickRarity(r){var x=Math.random()*100;if(x<r.SSR)return 'SSR';if(x<r.SSR+r.SR)return 'SR';if(x<r.SSR+r.SR+r.R)return 'R';return 'N';}
+function rollOnce(rates,groups){var rarity;if(pityEnabled){if(pitySSRCount>=(parseInt(document.getElementById('pitySSR').value)||90)){rarity='SSR';}else if(pitySRCount>=(parseInt(document.getElementById('pitySR').value)||10)){rarity=Math.random()<rates.SSR/100?'SSR':'SR';}else{rarity=pickRarity(rates);}}else{rarity=pickRarity(rates);}if(rarity==='SSR'){pitySSRCount=0;pitySRCount=0;}else if(rarity==='SR'){pitySRCount=0;pitySSRCount++;}else{pitySSRCount++;pitySRCount++;}var pool=groups[rarity];if(!pool||!pool.length)return{rarity:rarity,item:{name:'???',rarity:rarity}};var item=pool[Math.floor(Math.random()*pool.length)];return{rarity:rarity,item:{name:item.name,rarity:item.rarity}};}
+
+function runSimulation(){
+  var re=validateRates();if(re){showAlert(document.getElementById('simAlert'),'❌ '+re);return;}
+  var miss=checkPool();if(miss.length){showAlert(document.getElementById('simAlert'),'❌ ไม่มี Item: '+miss.join(', '));return;}
+  var rolls=parseInt(document.getElementById('simRolls').value)||0;
+  var ppr=parseFloat(document.getElementById('simPPR').value)||0;
+  var totalPrice=rolls*ppr;
+  if(rolls<=0||rolls>10000){showAlert(document.getElementById('simAlert'),'❌ จำนวนครั้ง 1-10,000');return;}
+  if(ppr<0){showAlert(document.getElementById('simAlert'),'❌ ราคาติดลบ');return;}
+  document.getElementById('simAlert').classList.remove('show');
+  var rates=getRates(),groups={SSR:[],SR:[],R:[],N:[]};itemPool.forEach(function(i){groups[i.rarity].push(i);});
+  showGachaAnim(rolls,function(){pitySSRCount=0;pitySRCount=0;var results=[];for(var i=0;i<rolls;i++){results.push(rollOnce(rates,groups));}lastSimResult={results:results,rolls:rolls,ppr:ppr,totalPrice:totalPrice,rates:rates,timestamp:new Date()};addToHistory(lastSimResult);renderSimResults(lastSimResult);document.getElementById('pitySSRCount').textContent=pitySSRCount;});
+}
+
+function renderSimResults(d){
+  var counts={SSR:0,SR:0,R:0,N:0},ic={};d.results.forEach(function(r){counts[r.rarity]++;var k=r.rarity+'::'+r.item.name;ic[k]=(ic[k]||0)+1;});
+  var mc=Object.entries(counts).sort(function(a,b){return b[1]-a[1];})[0][0];
+  var sc='';['SSR','SR','R','N'].forEach(function(r){sc+='<div class="summary-card '+r.toLowerCase()+'"><div class="sc-icon">'+RE[r]+'</div><div class="sc-value">'+counts[r]+'</div><div class="sc-label">'+r+'</div></div>';});
+  sc+='<div class="summary-card"><div class="sc-icon">&#127919;</div><div class="sc-value">'+d.rolls+'</div><div class="sc-label">Total Rolls</div></div>';
+  sc+='<div class="summary-card"><div class="sc-icon">&#128176;</div><div class="sc-value">'+(d.totalPrice>0?d.totalPrice.toLocaleString():'ฟรี')+'</div><div class="sc-label">ค่าใช้จ่าย (บาท)</div></div>';
+  sc+='<div class="summary-card"><div class="sc-icon">&#127942;</div><div class="sc-value" style="color:'+RC[mc]+'">'+mc+'</div><div class="sc-label">Rarity มากสุด</div></div>';
+  document.getElementById('summaryCards').innerHTML=sc;
+  var ch='';['SSR','SR','R','N'].forEach(function(r){var a=(counts[r]/d.rolls*100).toFixed(2);ch+='<div class="chart-bar-wrap"><div class="chart-bar-label" style="color:'+RC[r]+'">'+r+'</div><div class="chart-bar-track"><div class="chart-bar-fill '+r+'" style="width:'+Math.min(parseFloat(a),100)+'%">'+a+'%</div></div></div>';});
+  document.getElementById('rateChart').innerHTML=ch;
+  var tb='';['SSR','SR','R','N'].forEach(function(r){var a=(counts[r]/d.rolls*100).toFixed(2),df=(parseFloat(a)-d.rates[r]).toFixed(2);tb+='<tr><td><span class="rarity-tag '+r+'">'+RE[r]+' '+r+'</span></td><td>'+d.rates[r]+'%</td><td>'+counts[r]+'</td><td>'+a+'%</td><td class="'+(df>0?'diff-pos':'diff-neg')+'">'+(df>0?'+':'')+df+'%</td></tr>';});
+  document.getElementById('compTableBody').innerHTML=tb;
+  var so=['SSR','SR','R','N'],entries=Object.entries(ic).map(function(e){var p=e[0].split('::');return{rarity:p[0],name:p[1],count:e[1]};}).sort(function(a,b){return so.indexOf(a.rarity)-so.indexOf(b.rarity)||b.count-a.count;});
+  var cards='';entries.forEach(function(item,i){var em=getEmoji(item.name,item.rarity);cards+='<div class="item-card '+item.rarity+'" style="animation-delay:'+(i*0.04).toFixed(2)+'s">'+(item.count>1?'<div class="item-card-count">x'+item.count+'</div>':'')+'<div class="item-card-art">'+em+'</div><div class="item-card-stars">'+RS[item.rarity]+'</div><div class="item-card-name">'+escHtml(item.name)+'</div><div style="margin-top:4px"><span class="rarity-tag '+item.rarity+'" style="font-size:0.65em">'+item.rarity+'</span></div></div>';});
+  document.getElementById('itemResultGrid').innerHTML=cards||'<div class="empty-state">ไม่มีผลลัพธ์</div>';
+  document.getElementById('simResults').style.display='block';
+  document.getElementById('simResults').scrollIntoView({behavior:'smooth'});
+}
+
+function showGachaAnim(rolls,cb){var ov=document.getElementById('gachaOverlay'),icon=document.getElementById('gachaIcon'),text=document.getElementById('gachaText'),sub=document.getElementById('gachaSubText'),sparks=document.getElementById('gachaSparks');ov.classList.add('visible');sub.textContent='กำลังสุ่ม '+rolls+' ครั้ง...';sparks.innerHTML='';var cols=['#ffd700','#ff8c00','#b44fff','#4fa3ff','#ff44cc','#00e5ff'];for(var i=0;i<20;i++){var sp=document.createElement('div');sp.className='spark';var ang=Math.random()*Math.PI*2,dist=60+Math.random()*80;sp.style.cssText='--sc:'+cols[i%cols.length]+';--sd:'+(0.5+Math.random()*0.8).toFixed(2)+'s;--sx:'+Math.cos(ang)*dist+'px;--sy:'+Math.sin(ang)*dist+'px;animation-delay:'+(Math.random()*0.4).toFixed(2)+'s;';sparks.appendChild(sp);}var phases=[{i:'🎴',t:'召喚中...'},{i:'✨',t:'運命の扉が開く...'},{i:'💫',t:'神々の意志...'}],ph=0;var ti=setInterval(function(){ph=(ph+1)%3;icon.textContent=phases[ph].i;text.textContent=phases[ph].t;},400);setTimeout(function(){clearInterval(ti);ov.classList.remove('visible');cb();},Math.min(rolls*30,2000));}
+
+function runMonteCarlo(){var re=validateRates();if(re){showAlert(document.getElementById('povAlert'),'❌ '+re);return;}var miss=checkPool();if(miss.length){showAlert(document.getElementById('povAlert'),'❌ ไม่มี Item: '+miss.join(', '));return;}var budget=parseFloat(document.getElementById('povBudget').value)||0,price=parseFloat(document.getElementById('povPrice').value)||0,sims=parseInt(document.getElementById('povSims').value)||0;if(budget<=0){showAlert(document.getElementById('povAlert'),'❌ งบ > 0');return;}if(price<=0){showAlert(document.getElementById('povAlert'),'❌ ราคา > 0');return;}if(sims<10||sims>50000){showAlert(document.getElementById('povAlert'),'❌ 10-50,000');return;}document.getElementById('povAlert').classList.remove('show');var rates=getRates(),fx=freeRollEnabled?(parseInt(document.getElementById('freeRollX').value)||10):0,fy=freeRollEnabled?(parseInt(document.getElementById('freeRollY').value)||1):0,paid=Math.floor(budget/price),free=freeRollEnabled?Math.floor(paid/fx)*fy:0,total=paid+free,a1=0,z0=0,tSSR=0,tSR=0,best=0,worst=Infinity;for(var s=0;s<sims;s++){var sc=0,src=0;for(var i=0;i<total;i++){var r=pickRarity(rates);if(r==='SSR')sc++;else if(r==='SR')src++;}tSSR+=sc;tSR+=src;if(sc>=1)a1++;else z0++;if(sc>best)best=sc;if(sc<worst)worst=sc;}if(worst===Infinity)worst=0;lastPOVResult={budget:budget,price:price,paid:paid,free:free,total:total,sims:sims,chSSR:(a1/sims*100).toFixed(1),ch0:(z0/sims*100).toFixed(1),avgSSR:(tSSR/sims).toFixed(2),avgSR:(tSR/sims).toFixed(2),best:best,worst:worst};renderPOV(lastPOVResult);}
+function renderPOV(d){var fn=d.free>0?' + <strong>'+d.free+' free</strong> = <strong>'+d.total+' total</strong>':'';document.getElementById('povSummaryCards').innerHTML='<div class="summary-card"><div class="sc-icon">&#128184;</div><div class="sc-value">'+d.budget.toLocaleString()+'</div><div class="sc-label">งบ (บาท)</div></div><div class="summary-card"><div class="sc-icon">&#128179;</div><div class="sc-value">'+d.paid+'</div><div class="sc-label">Paid Rolls</div></div><div class="summary-card"><div class="sc-icon">&#9889;</div><div class="sc-value">'+d.free+'</div><div class="sc-label">Free Rolls</div></div><div class="summary-card"><div class="sc-icon">&#127922;</div><div class="sc-value">'+d.total+'</div><div class="sc-label">Total Rolls</div></div><div class="summary-card ssr"><div class="sc-icon">&#10003;</div><div class="sc-value">'+d.chSSR+'%</div><div class="sc-label">โอกาส SSR ≥ 1</div></div><div class="summary-card"><div class="sc-icon">&#10007;</div><div class="sc-value">'+d.ch0+'%</div><div class="sc-label">โอกาส 0 SSR</div></div><div class="summary-card"><div class="sc-icon">&#128202;</div><div class="sc-value">'+d.avgSSR+'</div><div class="sc-label">Avg SSR</div></div><div class="summary-card sr"><div class="sc-icon">&#128200;</div><div class="sc-value">'+d.avgSR+'</div><div class="sc-label">Avg SR</div></div>';var lv=parseFloat(d.chSSR),em=lv>=80?'🎉':lv>=50?'😊':lv>=20?'😬':'😢',mg=lv>=80?'โอกาสสูง — คุ้มค่า!':lv>=50?'โอกาสพอใช้ — ลุ้นได้':lv>=20?'โอกาสน้อย':'โอกาสต่ำมาก — ระวังงบ';document.getElementById('povInsight').innerHTML='<strong>💡 สรุป Insight</strong><br><br>งบ <strong>'+d.budget.toLocaleString()+' บาท</strong> ('+d.price+' บาท/roll) ได้สุ่ม <strong>'+d.paid+' paid</strong>'+fn+'<br><br>จาก <strong>'+d.sims.toLocaleString()+' simulations</strong>:<br>'+em+' โอกาส SSR ≥ 1: <strong>'+d.chSSR+'%</strong><br>โอกาส 0 SSR: <strong>'+d.ch0+'%</strong><br>Avg SSR: <strong>'+d.avgSSR+' ชิ้น</strong><br><br><strong style="color:'+(lv>=50?'var(--success)':'var(--warning)')+'">'+mg+'</strong>';document.getElementById('povBestWorst').innerHTML='<div class="summary-grid"><div class="summary-card ssr"><div class="sc-icon">&#127942;</div><div class="sc-value">'+d.best+'</div><div class="sc-label">Best SSR</div></div><div class="summary-card"><div class="sc-icon">&#128546;</div><div class="sc-value">'+d.worst+'</div><div class="sc-label">Worst SSR</div></div></div>';document.getElementById('povResults').style.display='block';document.getElementById('povResults').scrollIntoView({behavior:'smooth'});}
+
+function exportCSV(){if(!lastSimResult){alert('สุ่มก่อนเลย!');return;}var rows=['Roll No.,Rarity,Item Name,Cost per Roll,Total Cost'];lastSimResult.results.forEach(function(r,i){rows.push((i+1)+','+r.rarity+',"'+r.item.name+'",'+lastSimResult.ppr.toFixed(2)+','+lastSimResult.totalPrice.toFixed(2));});dlCSV(rows.join('\n'),'gacha_latest_pull.csv');}
+function exportPOVCSV(){if(!lastPOVResult){alert('จำลองก่อนเลย!');return;}var d=lastPOVResult;dlCSV(['Parameter,Value','Budget,'+d.budget,'Price per Roll,'+d.price,'Paid Rolls,'+d.paid,'Free Rolls,'+d.free,'Total Rolls,'+d.total,'Simulations,'+d.sims,'Chance >=1 SSR (%),'+d.chSSR,'Chance 0 SSR (%),'+d.ch0,'Avg SSR,'+d.avgSSR,'Avg SR,'+d.avgSR,'Best SSR,'+d.best,'Worst SSR,'+d.worst].join('\n'),'gacha_pov_summary.csv');}
+function dlCSV(content,filename){var blob=new Blob(['﻿'+content],{type:'text/csv;charset=utf-8;'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
+
+function addToHistory(d){var counts={SSR:0,SR:0,R:0,N:0};d.results.forEach(function(r){counts[r.rarity]++;});simulationHistory.unshift({rolls:d.rolls,ppr:d.ppr,totalPrice:d.totalPrice,counts:counts,timestamp:d.timestamp});if(simulationHistory.length>10)simulationHistory.pop();renderHistory();}
+function renderHistory(){var list=document.getElementById('historyList');if(!simulationHistory.length){list.innerHTML='<div class="empty-state"><div class="es-icon">&#128237;</div><div>ยังไม่มีประวัติ</div></div>';return;}list.innerHTML=simulationHistory.map(function(h,i){return'<div class="history-item"><div class="history-meta">รอบที่ '+(simulationHistory.length-i)+' · '+h.rolls+' rolls · '+(h.totalPrice>0?h.totalPrice.toLocaleString()+' บาท':'ฟรี')+' · '+h.timestamp.toLocaleTimeString('th-TH')+'</div><div class="history-counts"><span class="history-count" style="color:var(--ssr-color)">⭐ SSR: '+h.counts.SSR+'</span><span class="history-count" style="color:var(--sr-color)">💜 SR: '+h.counts.SR+'</span><span class="history-count" style="color:var(--r-color)">💙 R: '+h.counts.R+'</span><span class="history-count" style="color:var(--n-color)">⬜ N: '+h.counts.N+'</span><span class="history-count text-gold">SSR Rate: '+(h.counts.SSR/h.rolls*100).toFixed(1)+'%</span></div></div>';}).join('');}
+function clearHistory(){if(!confirm('ล้างประวัติ?'))return;simulationHistory=[];renderHistory();}
+
+function showAlert(el,msg){el.textContent=msg;el.className='alert alert-err show';el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function getEmoji(n,r){n=n.toLowerCase();if(n.indexOf('ดาบ')>=0||n.indexOf('sword')>=0)return '⚔️';if(n.indexOf('โล่')>=0||n.indexOf('shield')>=0)return '🛡️';if(n.indexOf('ธนู')>=0||n.indexOf('bow')>=0)return '🏹';if(n.indexOf('ไม้เท้า')>=0||n.indexOf('staff')>=0)return '🪤';if(n.indexOf('แหวน')>=0||n.indexOf('ring')>=0)return '💍';if(n.indexOf('มงกุฎ')>=0||n.indexOf('crown')>=0)return '👑';if(n.indexOf('ยา')>=0||n.indexOf('potion')>=0)return '🧪';if(n.indexOf('dragon')>=0||n.indexOf('มังกร')>=0)return '🐉';if(n.indexOf('fox')>=0||n.indexOf('จิ้งจอก')>=0)return '🦊';if(n.indexOf('cat')>=0||n.indexOf('แมว')>=0)return '🐱';if(r==='SSR')return '🌟';if(r==='SR')return '✨';if(r==='R')return '💫';return '📦';}
+
+document.getElementById('editModal').addEventListener('click',function(e){if(e.target===this)closeEditModal();});
+document.getElementById('deleteModal').addEventListener('click',function(e){if(e.target===this)closeDeleteModal();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeEditModal();closeDeleteModal();}});
+
+updateRates();renderItemPool();renderHistory();
+</script>
+</body>
+</html>
